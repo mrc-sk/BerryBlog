@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#111827"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="1010" cy="120" r="220" fill="#2f6fed" opacity="0.16"/>
+  <circle cx="180" cy="540" r="180" fill="#8b5cf6" opacity="0.14"/>
+  <text x="600" y="300" font-family="-apple-system, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif"
+        font-size="76" font-weight="700" fill="#ffffff" text-anchor="middle">Nova&#39;s Blog</text>
+  <text x="600" y="372" font-family="-apple-system, Segoe UI, PingFang SC, Microsoft YaHei, sans-serif"
+        font-size="32" fill="#9ca3af" text-anchor="middle">写代码，也写字</text>
+  <rect x="480" y="424" width="240" height="4" rx="2" fill="#2f6fed"/>
+</svg>

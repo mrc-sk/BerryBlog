@@ -1,0 +1,9 @@
+{
+  "name": "Nova's Blog",
+  "short_name": "Nova",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2f6fed",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

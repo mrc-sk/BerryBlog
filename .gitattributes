@@ -1,0 +1,16 @@
+# 默认按 LF 提交，避免 Windows 上产生 CRLF 差异
+* text=auto eol=lf
+
+# 二进制资源不做换行转换
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Windows 脚本保持 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# lock 文件不自动转换（npm 生成的格式固定）
+package-lock.json -text
