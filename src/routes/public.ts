@@ -102,7 +102,7 @@ publicRoutes.get('/p/:slug', async (c) => {
         path: `/p/${slug}`,
         title: '文章不存在',
         noindex: true,
-        body: `${pageHeader('404', '这篇文章不在这里')}${emptyState('找不到这篇文章', '它可能已被删除或改了地址')}`,
+        body: `${pageHeader('四百零四！', '找不到喵~')}${emptyState('我们瞎了', '不存在或者已私密，或者是个草稿~')}`,
       }),
       404
     );
