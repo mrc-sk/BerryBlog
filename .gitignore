@@ -8,4 +8,4 @@ dist-check/
 .DS_Store
 .env
 .env.*
-!.env.example
+!.env.examplewrangler.jsonc
