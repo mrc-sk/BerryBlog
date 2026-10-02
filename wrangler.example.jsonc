@@ -13,15 +13,15 @@
     {
       "binding": "DB",
       "database_name": "blog",
-      "database_id": "REPLACE_WITH_YOUR_D1_ID",
+      "database_id": "在这里填你自己的 D1 ID（npx wrangler d1 create blog 会输出）",
       "migrations_dir": "schema"
     }
   ],
   "vars": {
-    "SITE_NAME": "Nova's Blog",
-    "SITE_TAGLINE": "写代码，也写字",
-    "AUTHOR_NAME": "Nova",
-    "AUTHOR_BIO": "全栈开发者，喜欢折腾小工具。这里记录技术笔记与碎碎念。",
+    "SITE_NAME": "你的博客名",
+    "SITE_TAGLINE": "一句话简介",
+    "AUTHOR_NAME": "你的名字",
+    "AUTHOR_BIO": "自我介绍",
     "AUTHOR_AVATAR": "",
     "GITHUB_URL": "",
     "X_URL": "",

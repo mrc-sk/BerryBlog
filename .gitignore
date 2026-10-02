@@ -4,8 +4,20 @@ dist-check/
 .wrangler/
 .dev.vars
 .tmp-*.mjs
+stmts.b64
+stmts.json
+stmts.tsv
+seeds.tsv
 *.log
 .DS_Store
+
+# 个人部署配置（含与账号绑定的 D1 database_id）
+wrangler.jsonc
+
+# 提交一份模板，方便别人克隆后照着填
+!wrangler.example.jsonc
+
+# 环境变量
 .env
 .env.*
-!.env.examplewrangler.jsonc
+!.env.example
