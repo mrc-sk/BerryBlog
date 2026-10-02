@@ -49,7 +49,13 @@ npx wrangler d1 create blog
 
 ## 第 3 步：填进配置
 
-编辑 `wrangler.jsonc`，把 `REPLACE_WITH_YOUR_D1_ID` 换成刚才的 UUID：
+仓库里不含 `wrangler.jsonc`（它含与个人账号绑定的 D1 ID），先从模板复制：
+
+```bash
+cp wrangler.example.jsonc wrangler.jsonc      # Windows PowerShell: Copy-Item
+```
+
+编辑 `wrangler.jsonc`，把 `database_id` 换成刚才的 UUID：
 
 ```jsonc
   "d1_databases": [
@@ -61,6 +67,8 @@ npx wrangler d1 create blog
     }
   ],
 ```
+
+`vars` 里的个人信息也可以在这里改（也可以部署后在后台 `/admin/settings` 改站名/简介/关于/页脚）。
 
 ---
 
@@ -225,5 +233,14 @@ Worker 没部署成功，看 `npm run deploy` 的完整输出。
 
 **想确认线上到底有什么数据**
 ```bash
-npx wrangler d1 execute blog --remote --command "SELECT slug, title, status FROM posts;"
+npm run db:query -- "SELECT slug, title, status FROM posts;"
+```
+
+**改示例文章的内容**
+
+`schema/seed.sql` 由 `test/gen-seed.mjs` 生成，**不要手改**（手写很容易把markdown 里的真实换行写进 SQL 字符串，导致线上静默插入 0 行）。改内容请改生成器：
+
+```bash
+node test/gen-seed.mjs --verify    # 重新生成并真实跑 SQLite 验证
+npm run db:seed:remote             # 灌线上
 ```
