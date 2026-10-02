@@ -2,8 +2,7 @@
 
 Cloudflare Workers + D1 的全栈个人博客。**不是静态站** —— 有真正的后端、数据库和管理后台，但依然零服务器运维。
 
-![Workers](https://img.shields.io/badge/Cloudflare_Workers-orange) ![D1](https://img.shields.io/badge/D1-blue) ![Hono](https://img.shields.io/badge/Hono-pink) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6) ![License](https://img.shields.io/badge/license-MIT-green)
-
+![Workers](https://img.shields.io/badge/Cloudflare_Workers-orange) ![D1](https://img.shields.io/badge/D1-blue) ![Hono](https://img.shields.io/badge/Hono-pink) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6)
 ## 界面预览
 
 | 首页 | 文章页 |
