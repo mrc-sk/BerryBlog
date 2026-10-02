@@ -12,6 +12,14 @@
     "db:init:remote": "wrangler d1 execute blog --file=./schema/schema.sql --remote",
     "db:seed:local": "wrangler d1 execute blog --file=./schema/seed.sql --local",
     "db:seed:remote": "wrangler d1 execute blog --file=./schema/seed.sql --remote",
+    "db:query": "wrangler d1 execute blog --remote --command",
+    "db:list": "wrangler d1 list",
+    "login": "wrangler login",
+    "whoami": "wrangler whoami",
+    "tail": "wrangler tail",
+    "test": "node test/smoke.mjs",
+    "screenshot": "node test/screenshot.mjs",
+    "hash": "node test/gen-hash.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

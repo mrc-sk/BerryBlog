@@ -16,6 +16,8 @@ Cloudflare Workers + D1 的全栈个人博客。**不是静态站** —— 有�
 
 更多截图在 [`screenshots/`](screenshots/) 目录，含深色模式、归档、标签、关于、登录、设置页。
 
+**要部署到自己的 Cloudflare？** 看 **[`DEPLOY.md`](DEPLOY.md)** —— 9 步清单 + 命令速查 + 常见报错。
+
 ---
 
 ## 功能
@@ -131,13 +133,13 @@ npm run deploy
 
 **改密码**（默认的 admin123 必须改）：
 
+最简单的方式是上线后登 `/admin/settings` 改。或者命令行：
+
 ```bash
 node test/gen-hash.mjs '你的新密码'
-# 把输出的 hash 灌进去
+# 把输出的hash 灌进去
 npx wrangler d1 execute blog --remote --command "UPDATE users SET password_hash='<hash>' WHERE username='admin';"
 ```
-
-或者直接上线后登 `/admin/settings` 改，更简单。
 
 ### 第 5 步（可选）：绑定自定义域名
 
@@ -146,6 +148,8 @@ npx wrangler domains add blog.example.com
 ```
 
 或去 Cloudflare Dashboard → Workers → 你的 Worker → Settings → Domains。
+
+> **完整的部署清单、命令速查表、常见报错**见 [`DEPLOY.md`](DEPLOY.md)
 
 ---
 
