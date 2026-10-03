@@ -1,4 +1,4 @@
-import type { Download, Env, Post, SiteConfig, Tag } from '../types';
+import type { Download, DownloadSource, Env, Post, SiteConfig, Tag } from '../types';
 
 const SETTING_KEYS = [
   'site_name',
@@ -261,12 +261,29 @@ function safeDownloadUrl(raw: string): string {
   return s.slice(0, 2000);
 }
 
-export async function listDownloads(env: Env, onlyFeatured = false): Promise<Download[]> {
+export interface DownloadWithSources extends Download {
+  sources: DownloadSource[];
+}
+
+/** 列出下载项，带上各自的源 */
+export async function listDownloads(env: Env, onlyFeatured = false): Promise<DownloadWithSources[]> {
   const where = onlyFeatured ? 'WHERE is_featured = 1' : '';
   const res = await env.DB.prepare(
     `SELECT * FROM downloads ${where} ORDER BY sort_order ASC, id ASC`
   ).all<Download>();
-  return res.results || [];
+  const items = res.results || [];
+  if (!items.length) return [];
+
+  // 一次性把所有源捞出来，避免 N+1 查询
+  const srcRes = await env.DB.prepare(
+    'SELECT * FROM download_sources ORDER BY download_id ASC, sort_order ASC, id ASC'
+  ).all<DownloadSource>();
+  const byItem = new Map<number, DownloadSource[]>();
+  for (const s of srcRes.results || []) {
+    if (!byItem.has(s.download_id)) byItem.set(s.download_id, []);
+    byItem.get(s.download_id)!.push(s);
+  }
+  return items.map((d) => ({ ...d, sources: byItem.get(d.id) || [] }));
 }
 
 export async function countDownloads(env: Env): Promise<number> {
@@ -274,8 +291,13 @@ export async function countDownloads(env: Env): Promise<number> {
   return res?.c ?? 0;
 }
 
-export async function getDownload(env: Env, id: number): Promise<Download | null> {
-  return env.DB.prepare('SELECT * FROM downloads WHERE id = ?').bind(id).first<Download>();
+export async function getDownload(env: Env, id: number): Promise<DownloadWithSources | null> {
+  const row = await env.DB.prepare('SELECT * FROM downloads WHERE id = ?').bind(id).first<Download>();
+  if (!row) return null;
+  const srcRes = await env.DB.prepare(
+    'SELECT * FROM download_sources WHERE download_id = ? ORDER BY sort_order ASC, id ASC'
+  ).bind(id).all<DownloadSource>();
+  return { ...row, sources: srcRes.results || [] };
 }
 
 export interface DownloadInput {
@@ -284,65 +306,146 @@ export interface DownloadInput {
   platform: string;
   version: string;
   size: string;
-  url: string;
   is_featured: number;
+  sort_order: number;
+}
+
+export interface SourceInput {
+  label: string;
+  url: string;
   sort_order: number;
 }
 
 function normalizeDownload(input: DownloadInput): DownloadInput | { error: string } {
   const title = String(input.title || '').trim().slice(0, 100);
   if (!title) return { error: '标题不能为空' };
-  const url = safeDownloadUrl(input.url);
-  if (!url) return { error: '链接必须是 http:// 或 https:// 开头' };
   return {
     title,
     summary: String(input.summary || '').trim().slice(0, 300),
     platform: String(input.platform || '').trim().slice(0, 40),
     version: String(input.version || '').trim().slice(0, 40),
     size: String(input.size || '').trim().slice(0, 40),
-    url,
     is_featured: input.is_featured ? 1 : 0,
     sort_order: Number.isFinite(input.sort_order) ? Math.trunc(input.sort_order) : 0,
   };
 }
 
-export async function createDownload(env: Env, input: DownloadInput): Promise<number | { error: string }> {
-  const d = normalizeDownload(input);
-  if ('error' in d) return d;
-  // 新条目默认排到末尾
-  const maxRow = await env.DB.prepare('SELECT MAX(sort_order) AS m FROM downloads').first<{ m: number | null }>();
-  const order = d.sort_order || (maxRow?.m ?? -1) + 1;
-  const res = await env.DB.prepare(
-    `INSERT INTO downloads (title, summary, platform, version, size, url, is_featured, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  )
-    .bind(d.title, d.summary, d.platform, d.version, d.size, d.url, d.is_featured, order)
-    .run();
-  return Number(res.meta.last_row_id);
+/** 校验并归一化源列表：至少要有一个合法链接 */
+function normalizeSources(list: SourceInput[]): DownloadSource[] | { error: string } {
+  const out: DownloadSource[] = [];
+  for (const s of list) {
+    const url = safeDownloadUrl(s.url);
+    // 空的行直接跳过（后台表单里用户可能留了空行）
+    if (!url && !String(s.url || '').trim()) continue;
+    if (!url) return { error: '下载链接必须是 http:// 或 https:// 开头' };
+    out.push({
+      id: 0,
+      download_id: 0,
+      url,
+      label: String(s.label || '').trim().slice(0, 20),
+      sort_order: Number.isFinite(s.sort_order) ? Math.trunc(s.sort_order) : out.length,
+      downloads: 0,
+    });
+  }
+  if (!out.length) return { error: '至少要填一个下载链接' };
+  return out;
 }
 
-export async function updateDownload(env: Env, id: number, input: DownloadInput): Promise<'ok' | { error: string }> {
+export async function createDownload(
+  env: Env,
+  input: DownloadInput,
+  sources: SourceInput[]
+): Promise<number | { error: string }> {
   const d = normalizeDownload(input);
   if ('error' in d) return d;
-  await env.DB.prepare(
-    `UPDATE downloads
-        SET title = ?, summary = ?, platform = ?, version = ?, size = ?,
-            url = ?, is_featured = ?, sort_order = ?, updated_at = datetime('now')
-      WHERE id = ?`
+  const srcs = normalizeSources(sources);
+  if ('error' in srcs) return srcs;
+
+  const maxRow = await env.DB.prepare('SELECT MAX(sort_order) AS m FROM downloads').first<{ m: number | null }>();
+  const order = d.sort_order || (maxRow?.m ?? -1) + 1;
+
+  // 分两步：先取回新 id，再插源。
+  // 不能把源和 downloads 放进同一个 db.batch —— batch 内的语句拿不到上一步的
+  // last_insert_rowid，用 (SELECT MAX(id) FROM downloads) 兜底在并发下会串号。
+  const res = await env.DB.prepare(
+    `INSERT INTO downloads (title, summary, platform, version, size, is_featured, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
   )
-    .bind(d.title, d.summary, d.platform, d.version, d.size, d.url, d.is_featured, d.sort_order, id)
+    .bind(d.title, d.summary, d.platform, d.version, d.size, d.is_featured, order)
     .run();
+  const newId = Number(res.meta.last_row_id);
+
+  if (srcs.length) {
+    await env.DB.batch(
+      srcs.map((s, i) =>
+        env.DB.prepare(
+          'INSERT INTO download_sources (download_id, label, url, sort_order) VALUES (?, ?, ?, ?)'
+        ).bind(newId, s.label, s.url, i)
+      )
+    );
+  }
+  return newId;
+}
+
+export async function updateDownload(
+  env: Env,
+  id: number,
+  input: DownloadInput,
+  sources: SourceInput[]
+): Promise<'ok' | { error: string }> {
+  const d = normalizeDownload(input);
+  if ('error' in d) return d;
+  const srcs = normalizeSources(sources);
+  if ('error' in srcs) return srcs;
+
+  await env.DB.batch([
+    env.DB.prepare(
+      `UPDATE downloads
+          SET title = ?, summary = ?, platform = ?, version = ?, size = ?,
+              is_featured = ?, sort_order = ?, updated_at = datetime('now')
+        WHERE id = ?`
+    ).bind(d.title, d.summary, d.platform, d.version, d.size, d.is_featured, d.sort_order, id),
+    // 源整体替换：先清后插。数量不大，简单可靠；量大可改成 diff
+    env.DB.prepare('DELETE FROM download_sources WHERE download_id = ?').bind(id),
+    ...srcs.map((s, i) =>
+      env.DB.prepare(
+        'INSERT INTO download_sources (download_id, label, url, sort_order) VALUES (?, ?, ?, ?)'
+      ).bind(id, s.label, s.url, i)
+    ),
+  ]);
   return 'ok';
 }
 
 export async function deleteDownload(env: Env, id: number): Promise<void> {
-  await env.DB.prepare('DELETE FROM downloads WHERE id = ?').bind(id).run();
+  // 子表有 ON DELETE CASCADE，但 D1 默认不开 foreign_keys，手动清更稳
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM download_sources WHERE download_id = ?').bind(id),
+    env.DB.prepare('DELETE FROM downloads WHERE id = ?').bind(id),
+  ]);
 }
 
-/** 点击计数 + 记录来源，供「下载量」排序和后台展示 */
-export async function recordDownload(env: Env, id: number): Promise<string | null> {
-  const row = await env.DB.prepare('SELECT url FROM downloads WHERE id = ?').bind(id).first<{ url: string }>();
-  if (!row) return null;
-  await env.DB.prepare('UPDATE downloads SET downloads = downloads + 1 WHERE id = ?').bind(id).run();
-  return row.url;
+/**
+ * 点击计数 + 返回目标外链。传 sourceId 走指定源，不传走第一个。
+ * 每次点击都累计到 downloads.downloads（总下载量）和源的 downloads（分源统计）。
+ */
+export async function recordDownload(
+  env: Env,
+  id: number,
+  sourceId?: number
+): Promise<string | null> {
+  let q: DownloadSource | null = null;
+  if (sourceId) {
+    q = await env.DB.prepare('SELECT * FROM download_sources WHERE id = ? AND download_id = ?')
+      .bind(sourceId, id).first<DownloadSource>();
+  } else {
+    q = await env.DB.prepare(
+      'SELECT * FROM download_sources WHERE download_id = ? ORDER BY sort_order ASC, id ASC LIMIT 1'
+    ).bind(id).first<DownloadSource>();
+  }
+  if (!q) return null;
+  await env.DB.batch([
+    env.DB.prepare('UPDATE downloads SET downloads = downloads + 1 WHERE id = ?').bind(id),
+    env.DB.prepare('UPDATE download_sources SET downloads = downloads + 1 WHERE id = ?').bind(q.id),
+  ]);
+  return q.url;
 }

@@ -507,7 +507,7 @@ adminRoutes.get('/downloads', async (c) => {
       (d) => `<tr>
       <td class="t-title">
         <strong>${html(d.title)}</strong>${d.is_featured ? ' <span class="badge dl-star">推荐</span>' : ''}
-        <div class="t-slug">${html(d.url)}</div>
+        <div class="t-slug">${d.sources.length} 个下载源</div>
       </td>
       <td>${d.platform ? html(d.platform) : '<span class="muted">—</span>'}</td>
       <td>${d.version ? html(d.version) : '<span class="muted">—</span>'}</td>
@@ -526,10 +526,18 @@ adminRoutes.get('/downloads', async (c) => {
     )
     .join('');
 
-  const blank = {
-    id: 0, title: '', summary: '', platform: '', version: '',
-    size: '', url: '', is_featured: 0, sort_order: items.length,
-  };
+  /* ---------------- 下载源行（可动态增删） ---------------- */
+  const srcRow = (s: { label: string; url: string }) => `<div class="src-row">
+    <input name="src_label" maxlength="20" placeholder="来源名" value="${html(s.label)}">
+    <input name="src_url" maxlength="2000" placeholder="https://..." value="${html(s.url)}">
+    <button type="button" class="link-btn danger src-del" title="删除这行">✕</button>
+  </div>`;
+
+  const existing = editing?.sources || [];
+  // 编辑时回填已有源；新增时给两行空的（第一行是主源）
+  const srcHtml = (existing.length ? existing : [{ label: '主源', url: '' }])
+    .map(srcRow)
+    .join('');
 
   const inner = `<main class="admin-main">
     <div class="admin-head">
@@ -565,10 +573,16 @@ adminRoutes.get('/downloads', async (c) => {
           <input name="summary" maxlength="300" placeholder="用起来怎么样，为什么推荐"
                  value="${html(editing?.summary || '')}">
         </label>
-        <label>下载链接 *
-          <input name="url" required type="url" maxlength="2000" placeholder="https://github.com/.../releases/latest"
-                 value="${html(editing?.url || '')}">
-        </label>
+
+        <div class="src-block">
+          <div class="src-head">
+            <span class="src-label-t">下载源 <span class="muted">*</span></span>
+            <button type="button" class="btn-ghost btn-sm" id="src-add">+ 添加一个源</button>
+          </div>
+          <p class="muted src-tip">可以填多个：主源、备用源、镜像站、GitHub / 官网等。第一个会作为默认按钮。</p>
+          <div id="src-list">${srcHtml}</div>
+        </div>
+
         <div class="dl-grid">
           <label>排序
             <input name="sort_order" type="number" value="${editing?.sort_order ?? items.length}">
@@ -586,7 +600,7 @@ adminRoutes.get('/downloads', async (c) => {
     </form>
 
     <table class="admin-table">
-      <thead><tr><th>标题 / 链接</th><th>平台</th><th>版本</th><th>大小</th><th>排序</th><th>下载量</th><th>操作</th></tr></thead>
+      <thead><tr><th>标题</th><th>平台</th><th>版本</th><th>大小</th><th>排序</th><th>下载量</th><th>操作</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="7" class="t-empty">还没有下载项，用上面的表单加一个</td></tr>'}</tbody>
     </table>
   </main>`;
@@ -596,22 +610,47 @@ adminRoutes.get('/downloads', async (c) => {
   );
 });
 
+/**
+ * 从表单里收集下载源。
+ *
+ * 必须用 formData().getAll() 而不是 Hono 的 parseBody()：后者对
+ * application/x-www-form-urlencoded 的同名字段是「后者覆盖前者」，
+ * src_url 传 3 行只会拿到最后 1 个。
+ * 用 raw.clone() 是因为 body 流只能读一次，调用方可能已经读过。
+ */
+async function collectSources(raw: Request): Promise<{ label: string; url: string; sort_order: number }[]> {
+  const f = await raw.clone().formData();
+  const labels = f.getAll('src_label').map((v) => String(v).trim());
+  const urls = f.getAll('src_url').map((v) => String(v).trim());
+  const out: { label: string; url: string; sort_order: number }[] = [];
+  for (let i = 0; i < urls.length; i++) {
+    if (!urls[i]) continue; // 空行跳过
+    out.push({ label: labels[i] || '', url: urls[i], sort_order: out.length });
+  }
+  return out;
+}
+
 adminRoutes.post('/downloads', async (c) => {
-  const form = await c.req.parseBody();
-  const get = (k: string) => String(form[k] ?? '').trim();
+  // 先读 formData（body 只能读一次），普通字段从 FormData 取，
+  // 同名的 src_label / src_url 用 getAll拿全部值。
+  const f = await c.req.raw.clone().formData();
+  const get = (k: string) => String(f.get(k) ?? '').trim();
   if (!checkCsrf(c.req.raw, get('csrf_token'))) {
     return c.redirect('/admin/downloads?err=' + encodeURIComponent('会话已过期，请重试'));
   }
-  const r = await createDownload(c.env, {
-    title: get('title'),
-    summary: get('summary'),
-    platform: get('platform'),
-    version: get('version'),
-    size: get('size'),
-    url: get('url'),
-    is_featured: form.is_featured ? 1 : 0,
-    sort_order: parseInt(get('sort_order'), 10) || 0,
-  });
+  const r = await createDownload(
+    c.env,
+    {
+      title: get('title'),
+      summary: get('summary'),
+      platform: get('platform'),
+      version: get('version'),
+      size: get('size'),
+      is_featured: f.get('is_featured') ? 1 : 0,
+      sort_order: parseInt(get('sort_order'), 10) || 0,
+    },
+    await collectSources(c.req.raw)
+  );
   if (typeof r === 'object') {
     return c.redirect('/admin/downloads?err=' + encodeURIComponent(r.error));
   }
@@ -619,22 +658,26 @@ adminRoutes.post('/downloads', async (c) => {
 });
 
 adminRoutes.post('/downloads/:id', async (c) => {
-  const form = await c.req.parseBody();
-  const get = (k: string) => String(form[k] ?? '').trim();
+  const f = await c.req.raw.clone().formData();
+  const get = (k: string) => String(f.get(k) ?? '').trim();
   const id = parseInt(c.req.param('id'), 10);
   if (!checkCsrf(c.req.raw, get('csrf_token'))) {
     return c.redirect(`/admin/downloads?edit=${id}&err=` + encodeURIComponent('会话已过期，请重试'));
   }
-  const r = await updateDownload(c.env, id, {
-    title: get('title'),
-    summary: get('summary'),
-    platform: get('platform'),
-    version: get('version'),
-    size: get('size'),
-    url: get('url'),
-    is_featured: form.is_featured ? 1 : 0,
-    sort_order: parseInt(get('sort_order'), 10) || 0,
-  });
+  const r = await updateDownload(
+    c.env,
+    id,
+    {
+      title: get('title'),
+      summary: get('summary'),
+      platform: get('platform'),
+      version: get('version'),
+      size: get('size'),
+      is_featured: f.get('is_featured') ? 1 : 0,
+      sort_order: parseInt(get('sort_order'), 10) || 0,
+    },
+    await collectSources(c.req.raw)
+  );
   if (r !== 'ok') {
     return c.redirect(`/admin/downloads?edit=${id}&err=` + encodeURIComponent(r.error));
   }

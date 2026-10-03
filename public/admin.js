@@ -252,3 +252,39 @@
     }
   });
 })();
+/* ------------------------------------------------- 下载源：动态增删行 */
+(function () {
+  var list = document.getElementById('src-list');
+  var addBtn = document.getElementById('src-add');
+  if (!list || !addBtn) return;
+
+  var ICON = '✕';
+
+  function bindDel(row) {
+    var del = row.querySelector('.src-del');
+    if (!del) return;
+    del.addEventListener('click', function () {
+      // 至少留一行，省得表单变成空数组
+      if (list.querySelectorAll('.src-row').length <= 1) {
+        row.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+        return;
+      }
+      row.remove();
+    });
+  }
+
+  list.querySelectorAll('.src-row').forEach(bindDel);
+
+  addBtn.addEventListener('click', function () {
+    var row = document.createElement('div');
+    row.className = 'src-row';
+    row.innerHTML =
+      '<input name="src_label" maxlength="20" placeholder="来源名">' +
+      '<input name="src_url" maxlength="2000" placeholder="https://...">' +
+      '<button type="button" class="link-btn danger src-del" title="删除这行">' + ICON + '</button>';
+    list.appendChild(row);
+    bindDel(row);
+    var first = row.querySelector('input');
+    if (first) first.focus();
+  });
+})();

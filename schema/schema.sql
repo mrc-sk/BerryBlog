@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 -- 下载资源（后台可增删改，存的是外链，不占存储）
+-- 每条支持任意多个下载源，源存在 download_sources 子表
 CREATE TABLE IF NOT EXISTS downloads (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   title       TEXT NOT NULL,
@@ -88,7 +89,6 @@ CREATE TABLE IF NOT EXISTS downloads (
   platform    TEXT NOT NULL DEFAULT '',
   version     TEXT NOT NULL DEFAULT '',
   size        TEXT NOT NULL DEFAULT '',
-  url         TEXT NOT NULL,
   is_featured INTEGER NOT NULL DEFAULT 0,
   sort_order  INTEGER NOT NULL DEFAULT 0,
   downloads   INTEGER NOT NULL DEFAULT 0,
@@ -96,3 +96,15 @@ CREATE TABLE IF NOT EXISTS downloads (
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_downloads_sort ON downloads(sort_order, id);
+
+-- 下载源（一条下载项可以有 N 个源：主源、备用源、镜像站…）
+CREATE TABLE IF NOT EXISTS download_sources (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  download_id INTEGER NOT NULL,
+  label       TEXT NOT NULL DEFAULT '',
+  url         TEXT NOT NULL,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  downloads   INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY (download_id) REFERENCES downloads(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_sources_dl ON download_sources(download_id, sort_order);

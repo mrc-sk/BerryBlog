@@ -45,12 +45,21 @@ export interface Download {
   platform: string;
   version: string;
   size: string;
-  url: string;
   is_featured: number;
   sort_order: number;
   downloads: number;
   created_at: string;
   updated_at: string;
+}
+
+/** 下载项下的一个下载源（一条下载项可以有 N 个） */
+export interface DownloadSource {
+  id: number;
+  download_id: number;
+  label: string;
+  url: string;
+  sort_order: number;
+  downloads: number;
 }
 
 export interface Comment {

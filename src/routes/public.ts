@@ -345,7 +345,14 @@ publicRoutes.get('/downloads', async (c) => {
     version: string;
     size: string;
     downloads: number;
-  }) => `<article class="dl-card">
+    sources: { id: number; label: string; downloads: number }[];
+  }) => {
+    // 第一个源做主按钮，其余做次要按钮
+    const [main, ...others] = d.sources;
+    const buttons = (s: { id: number; label: string }, cls: string) =>
+      `<a class="dl-btn ${cls}" href="/d/${d.id}?s=${s.id}" rel="nofollow noopener">${html(s.label || '下载')}</a>`;
+
+    return `<article class="dl-card">
     <div class="dl-main">
       <h3>${html(d.title)}</h3>
       ${d.summary ? `<p class="dl-summary">${html(d.summary)}</p>` : ''}
@@ -353,11 +360,24 @@ publicRoutes.get('/downloads', async (c) => {
         ${d.platform ? `<span class="dl-tag">${html(d.platform)}</span>` : ''}
         ${d.version ? `<span>v${html(d.version)}</span>` : ''}
         ${d.size ? `<span>${html(d.size)}</span>` : ''}
+        <span>${d.sources.length} 个源</span>
         ${d.downloads > 0 ? `<span>${d.downloads} 次下载</span>` : ''}
       </div>
     </div>
-    <a class="dl-btn" href="/d/${d.id}" rel="nofollow noopener">下载</a>
+    ${
+      d.sources.length > 1
+        ? `<div class="dl-acts">
+            ${buttons(main, 'dl-btn-primary')}
+            <div class="dl-acts-more">
+              ${others.map((s) => buttons(s, 'dl-btn-alt')).join('')}
+            </div>
+          </div>`
+        : main
+          ? buttons(main, 'dl-btn-primary')
+          : '<span class="muted">暂无链接</span>'
+    }
   </article>`;
+  };
 
   const body = `${pageHeader('下载', items.length ? '这里放一些我用过觉得还行的工具和资源' : '')}
   <div class="wrap content-col">
@@ -388,10 +408,11 @@ publicRoutes.get('/downloads', async (c) => {
   return c.html(layout({ env: site, path: '/downloads', title: '下载', body }));
 });
 
-/** 中转跳转：记一次下载量再 302 到外链 */
+/** 中转跳转：记一次下载量再 302 到外链。?s=<sourceId> 指定用哪个源 */
 publicRoutes.get('/d/:id', async (c) => {
   const id = parseInt(c.req.param('id'), 10);
-  const url = await recordDownload(c.env, id);
+  const s = parseInt(c.req.query('s') || '0', 10) || undefined;
+  const url = await recordDownload(c.env, id, s);
   if (!url) return c.redirect('/downloads');
   return c.redirect(url, 302);
 });

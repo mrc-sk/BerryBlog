@@ -618,9 +618,23 @@ kbd {
 .dl-btn:hover { filter: brightness(1.08); text-decoration: none; transform: scale(1.03); }
 .dl-btn:active { transform: scale(0.97); box-shadow: var(--neu-in-sm); }
 
+/* 多下载源：主按钮 + 备用源组 */
+.dl-acts {
+  flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+  min-width: 118px;
+}
+.dl-acts-more { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.dl-btn-alt {
+  padding: 6px 14px; font-size: 12.5px;
+  background: var(--bg-elev); color: var(--text-mid);
+  box-shadow: var(--neu-in-xs);
+}
+.dl-btn-alt:hover { color: var(--accent); filter: none; box-shadow: var(--neu-in-sm); }
+
 .dl-note { font-size: 13px; margin-top: 26px; text-align: center; }
 
 @media (max-width: 620px) {
   .dl-card { flex-direction: column; align-items: stretch; gap: 14px; padding: 18px; text-align: left; }
   .dl-btn { width: 100%; text-align: center; }
+  .dl-acts { min-width: 0; }
 }

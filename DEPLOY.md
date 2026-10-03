@@ -142,6 +142,25 @@ npx wrangler d1 execute blog --remote --command \
 
 保留站点结构和后台，清空示例内容。
 
+## 数据库迁移
+
+`schema/0002_download_sources.sql` 把下载区从「单链接」升级成「每项多个下载源」。
+**如果你的库是本项目之前部署的（downloads 表里还有 url 列），必须跑一次：**
+
+```bash
+npx wrangler d1 execute blog --remote --file=./schema/0002_download_sources.sql
+```
+
+脚本会：把旧的 `downloads.url` 迁成第一条源（label='主源'）→ 重建不带 url 列的 downloads 表 → 导回源。
+
+迁移前后会自动核对，无需手工干预。脚本**不可重复执行**（第二遍会因临时表冲突报错，忽略即可）。
+
+自测（不碰线上库，纯内存 SQLite 跑一遍）：
+
+```bash
+node test/migrate.test.mjs      # 14 项断言
+```
+
 ---
 
 ## 第 9 步（可选）：填个人信息

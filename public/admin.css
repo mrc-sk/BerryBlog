@@ -202,3 +202,28 @@
 
 /* 表头不折行：中文列名在窄列里会被拆成两行 */
 .admin-table th { white-space: nowrap; }
+
+/* 下载源：可动态增删的行 */
+.src-block { margin: 4px 0 14px; }
+.src-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.src-label-t { font-weight: 500; font-size: 14px; }
+.src-tip { font-size: 12.5px; margin: 0 0 10px; }
+.src-row {
+  display: grid; grid-template-columns: 130px 1fr 32px;
+  gap: 8px; align-items: center; margin-bottom: 8px;
+}
+.src-row input { margin: 0; }
+.src-del {
+  width: 32px; height: 32px; padding: 0; line-height: 1;
+  font-size: 14px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-sm { padding: 6px 12px; font-size: 13px; margin-top: 0; }
+
+@media (max-width: 760px) {
+  .src-row { grid-template-columns: 1fr 32px; }
+  .src-row input[name='src_label'] { grid-column: 1 / -1; }
+}
