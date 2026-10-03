@@ -578,3 +578,49 @@ kbd {
   .footer-inner { grid-template-columns: 1fr; gap: 20px; }
   .about-card { flex-direction: column; }
 }
+/* ------------------------------------------------------------- 下载区 */
+.dl-section {
+  font-size: 15px; color: var(--text-dim); text-transform: uppercase;
+  letter-spacing: 0.08em; margin: 0 0 16px; font-weight: 500;
+}
+.dl-featured { margin-bottom: 34px; }
+
+.dl-card {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--bg-elev); border-radius: var(--radius);
+  box-shadow: var(--neu-out-sm);
+  padding: 20px 24px; margin-bottom: 16px;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.dl-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--neu-out);
+}
+.dl-main { flex: 1; min-width: 0; }
+.dl-main h3 { margin: 0 0 6px; font-size: 17px; font-weight: 600; }
+.dl-summary { margin: 0 0 10px; color: var(--text-mid); font-size: 14px; }
+.dl-meta {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+  font-size: 12.5px; color: var(--text-dim);
+}
+.dl-meta > span {
+  padding: 2px 9px; border-radius: 999px;
+  background: var(--bg-soft); box-shadow: var(--neu-in-xs);
+}
+.dl-tag { color: var(--accent); }
+
+.dl-btn {
+  flex: none; padding: 11px 26px; border-radius: 999px;
+  background: var(--accent); color: var(--accent-text);
+  font-size: 14px; font-weight: 500; white-space: nowrap;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.dl-btn:hover { filter: brightness(1.08); text-decoration: none; transform: scale(1.03); }
+.dl-btn:active { transform: scale(0.97); box-shadow: var(--neu-in-sm); }
+
+.dl-note { font-size: 13px; margin-top: 26px; text-align: center; }
+
+@media (max-width: 620px) {
+  .dl-card { flex-direction: column; align-items: stretch; gap: 14px; padding: 18px; text-align: left; }
+  .dl-btn { width: 100%; text-align: center; }
+}

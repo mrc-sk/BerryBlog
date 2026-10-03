@@ -9,6 +9,8 @@ import {
   getPublishedPosts,
   getSiteConfig,
   incrementViews,
+  listDownloads,
+  recordDownload,
 } from '../lib/db';
 import { emptyState, layout, pageHeader, pager, postCard, siteOrigin } from '../lib/layout';
 import { excerpt, fmtDate, getClientIp, html, pageUrl, paginate, slugify } from '../lib/utils';
@@ -324,6 +326,74 @@ publicRoutes.get('/about', async (c) => {
     <div class="list">${recent.map((p) => postCard(p, { compact: true })).join('')}</div>
   </div>`;
   return c.html(layout({ env: site, path: '/about', title: '关于', body }));
+});
+
+/* ------------------------------------------------------------- 下载区 */
+publicRoutes.get('/downloads', async (c) => {
+  const env = c.env;
+  const site = await getSiteConfig(env);
+  const items = await listDownloads(env);
+
+  const featured = items.filter((d) => d.is_featured);
+  const rest = items.filter((d) => !d.is_featured);
+
+  const card = (d: {
+    id: number;
+    title: string;
+    summary: string;
+    platform: string;
+    version: string;
+    size: string;
+    downloads: number;
+  }) => `<article class="dl-card">
+    <div class="dl-main">
+      <h3>${html(d.title)}</h3>
+      ${d.summary ? `<p class="dl-summary">${html(d.summary)}</p>` : ''}
+      <div class="dl-meta">
+        ${d.platform ? `<span class="dl-tag">${html(d.platform)}</span>` : ''}
+        ${d.version ? `<span>v${html(d.version)}</span>` : ''}
+        ${d.size ? `<span>${html(d.size)}</span>` : ''}
+        ${d.downloads > 0 ? `<span>${d.downloads} 次下载</span>` : ''}
+      </div>
+    </div>
+    <a class="dl-btn" href="/d/${d.id}" rel="nofollow noopener">下载</a>
+  </article>`;
+
+  const body = `${pageHeader('下载', items.length ? '这里放一些我用过觉得还行的工具和资源' : '')}
+  <div class="wrap content-col">
+    ${
+      items.length
+        ? `
+    ${
+      featured.length
+        ? `<section class="dl-featured">
+      <h2 class="dl-section">推荐</h2>
+      ${featured.map(card).join('')}
+    </section>`
+        : ''
+    }
+    ${
+      rest.length
+        ? `<section class="dl-rest">
+      ${featured.length ? '<h2 class="dl-section">全部</h2>' : ''}
+      ${rest.map(card).join('')}
+    </section>`
+        : ''
+    }
+    <p class="dl-note muted">资源托管在第三方，链接可能失效。发现失效了欢迎告诉我。</p>`
+        : emptyState('还没有内容', '去后台 /admin/downloads 添加下载链接')
+    }
+  </div>`;
+
+  return c.html(layout({ env: site, path: '/downloads', title: '下载', body }));
+});
+
+/** 中转跳转：记一次下载量再 302 到外链 */
+publicRoutes.get('/d/:id', async (c) => {
+  const id = parseInt(c.req.param('id'), 10);
+  const url = await recordDownload(c.env, id);
+  if (!url) return c.redirect('/downloads');
+  return c.redirect(url, 302);
 });
 
 /* -------------------------------------------------------------- RSS */

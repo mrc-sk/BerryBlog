@@ -1,6 +1,18 @@
 import { Hono } from 'hono';
 import type { Env, Post } from '../types';
-import { allTags, countAllPosts, getAllPosts, getPostById, getSiteConfig, saveSettings, syncTags } from '../lib/db';
+import {
+  allTags,
+  countAllPosts,
+  createDownload,
+  deleteDownload,
+  getAllPosts,
+  getPostById,
+  getSiteConfig,
+  listDownloads,
+  saveSettings,
+  syncTags,
+  updateDownload,
+} from '../lib/db';
 import {
   checkCsrf,
   clearRateLimit,
@@ -114,6 +126,7 @@ function adminShell(
     ['/admin', '文章'],
     ['/admin/comments', '评论'],
     ['/admin/tags', '标签'],
+    ['/admin/downloads', '下载'],
     ['/admin/settings', '设置'],
   ]
     .map(([href, label]) => `<a href="${href}" class="${active === href ? 'active' : ''}">${label}</a>`)
@@ -479,6 +492,160 @@ adminRoutes.get('/tags', async (c) => {
     </div>
   </main>`;
   return c.html(adminShell(site, '/admin/tags', csrf(c), c.get('user'), inner, c.req.query('ok') || ''));
+});
+
+/* ---------------------------------------------------------- 下载区 */
+adminRoutes.get('/downloads', async (c) => {
+  const site = await getSiteConfig(c.env);
+  const items = await listDownloads(c.env);
+  const err = c.req.query('err') || '';
+  const editingId = parseInt(c.req.query('edit') || '0', 10) || 0;
+  const editing = editingId ? items.find((d) => d.id === editingId) : null;
+
+  const rows = items
+    .map(
+      (d) => `<tr>
+      <td class="t-title">
+        <strong>${html(d.title)}</strong>${d.is_featured ? ' <span class="badge dl-star">推荐</span>' : ''}
+        <div class="t-slug">${html(d.url)}</div>
+      </td>
+      <td>${d.platform ? html(d.platform) : '<span class="muted">—</span>'}</td>
+      <td>${d.version ? html(d.version) : '<span class="muted">—</span>'}</td>
+      <td>${d.size ? html(d.size) : '<span class="muted">—</span>'}</td>
+      <td class="t-num">${d.sort_order}</td>
+      <td class="t-num">${d.downloads}</td>
+      <td class="t-act">
+        <a href="/admin/downloads?edit=${d.id}#dl-form">编辑</a>
+        <a href="/downloads" target="_blank">看</a>
+        <form method="post" action="/admin/downloads/${d.id}/delete" data-confirm="确定删除《${escapeHtml(d.title)}》？">
+          <input type="hidden" name="csrf_token" value="${html(csrf(c))}">
+          <button class="link-btn danger" type="submit">删</button>
+        </form>
+      </td>
+    </tr>`
+    )
+    .join('');
+
+  const blank = {
+    id: 0, title: '', summary: '', platform: '', version: '',
+    size: '', url: '', is_featured: 0, sort_order: items.length,
+  };
+
+  const inner = `<main class="admin-main">
+    <div class="admin-head">
+      <h1>下载 <span class="muted">${items.length} 个</span></h1>
+      <a class="btn-ghost" href="/downloads" target="_blank">查看页面 ↗</a>
+    </div>
+
+    <form class="settings-form dl-form" id="dl-form" method="post"
+          action="${editing ? `/admin/downloads/${editing.id}` : '/admin/downloads'}">
+      <input type="hidden" name="csrf_token" value="${html(csrf(c))}">
+      <div class="box">
+        <h3>${editing ? `编辑：${html(editing.title)}` : '添加下载项'}</h3>
+        ${err ? `<div class="flash err">${html(err)}</div>` : ''}
+        <div class="dl-grid">
+          <label>标题 *
+            <input name="title" required maxlength="100" placeholder="例如：Obsidian"
+                 value="${html(editing?.title || '')}">
+          </label>
+          <label>平台 / 分类
+            <input name="platform" maxlength="40" placeholder="Windows / macOS / 跨平台"
+                   value="${html(editing?.platform || '')}">
+          </label>
+          <label>版本
+            <input name="version" maxlength="40" placeholder="1.6.7"
+                   value="${html(editing?.version || '')}">
+          </label>
+          <label>大小
+            <input name="size" maxlength="40" placeholder="约 120 MB"
+                   value="${html(editing?.size || '')}">
+          </label>
+        </div>
+        <label>一句话说明
+          <input name="summary" maxlength="300" placeholder="用起来怎么样，为什么推荐"
+                 value="${html(editing?.summary || '')}">
+        </label>
+        <label>下载链接 *
+          <input name="url" required type="url" maxlength="2000" placeholder="https://github.com/.../releases/latest"
+                 value="${html(editing?.url || '')}">
+        </label>
+        <div class="dl-grid">
+          <label>排序
+            <input name="sort_order" type="number" value="${editing?.sort_order ?? items.length}">
+          </label>
+          <label class="check">
+            <input type="checkbox" name="is_featured" value="1" ${editing?.is_featured ? 'checked' : ''}>
+            标为推荐
+          </label>
+        </div>
+        <div class="dl-actions">
+          <button class="btn-primary" type="submit">${editing ? '保存修改' : '添加'}</button>
+          ${editing ? '<a class="btn-ghost" href="/admin/downloads">取消</a>' : ''}
+        </div>
+      </div>
+    </form>
+
+    <table class="admin-table">
+      <thead><tr><th>标题 / 链接</th><th>平台</th><th>版本</th><th>大小</th><th>排序</th><th>下载量</th><th>操作</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="7" class="t-empty">还没有下载项，用上面的表单加一个</td></tr>'}</tbody>
+    </table>
+  </main>`;
+
+  return c.html(
+    adminShell(site, '/admin/downloads', csrf(c), c.get('user'), inner, c.req.query('ok') || '')
+  );
+});
+
+adminRoutes.post('/downloads', async (c) => {
+  const form = await c.req.parseBody();
+  const get = (k: string) => String(form[k] ?? '').trim();
+  if (!checkCsrf(c.req.raw, get('csrf_token'))) {
+    return c.redirect('/admin/downloads?err=' + encodeURIComponent('会话已过期，请重试'));
+  }
+  const r = await createDownload(c.env, {
+    title: get('title'),
+    summary: get('summary'),
+    platform: get('platform'),
+    version: get('version'),
+    size: get('size'),
+    url: get('url'),
+    is_featured: form.is_featured ? 1 : 0,
+    sort_order: parseInt(get('sort_order'), 10) || 0,
+  });
+  if (typeof r === 'object') {
+    return c.redirect('/admin/downloads?err=' + encodeURIComponent(r.error));
+  }
+  return c.redirect('/admin/downloads?ok=' + encodeURIComponent('已添加'));
+});
+
+adminRoutes.post('/downloads/:id', async (c) => {
+  const form = await c.req.parseBody();
+  const get = (k: string) => String(form[k] ?? '').trim();
+  const id = parseInt(c.req.param('id'), 10);
+  if (!checkCsrf(c.req.raw, get('csrf_token'))) {
+    return c.redirect(`/admin/downloads?edit=${id}&err=` + encodeURIComponent('会话已过期，请重试'));
+  }
+  const r = await updateDownload(c.env, id, {
+    title: get('title'),
+    summary: get('summary'),
+    platform: get('platform'),
+    version: get('version'),
+    size: get('size'),
+    url: get('url'),
+    is_featured: form.is_featured ? 1 : 0,
+    sort_order: parseInt(get('sort_order'), 10) || 0,
+  });
+  if (r !== 'ok') {
+    return c.redirect(`/admin/downloads?edit=${id}&err=` + encodeURIComponent(r.error));
+  }
+  return c.redirect('/admin/downloads?ok=' + encodeURIComponent('已保存'));
+});
+
+adminRoutes.post('/downloads/:id/delete', async (c) => {
+  const form = await c.req.parseBody();
+  if (!checkCsrf(c.req.raw, String(form.csrf_token || ''))) return c.redirect('/admin/downloads');
+  await deleteDownload(c.env, parseInt(c.req.param('id'), 10));
+  return c.redirect('/admin/downloads?ok=' + encodeURIComponent('已删除'));
 });
 
 /* ------------------------------------------------------------ 设置 */

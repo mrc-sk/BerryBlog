@@ -177,3 +177,28 @@
   .admin-table { display: block; overflow-x: auto; }
   .admin-bar nav { overflow-x: auto; }
 }
+/* ------------------------------------------------------------- 下载区 */
+.dl-form .box { margin-bottom: 22px; }
+.dl-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 0 14px;
+}
+.dl-grid label.check {
+  display: flex; align-items: center; gap: 8px;
+  align-self: end; padding-bottom: 12px;
+}
+.dl-grid label.check input { margin: 0; }
+.dl-actions { display: flex; gap: 10px; align-items: center; margin-top: 6px; }
+.dl-actions .btn-ghost { margin-top: 0; }
+.badge.dl-star {
+  background: rgba(245, 158, 11, 0.16); color: #d97706;
+  font-size: 11px; padding: 1px 8px; border-radius: 999px;
+}
+[data-theme='dark'] .badge.dl-star { color: #fbbf24; }
+
+@media (max-width: 760px) {
+  .dl-grid { grid-template-columns: 1fr; }
+}
+
+/* 表头不折行：中文列名在窄列里会被拆成两行 */
+.admin-table th { white-space: nowrap; }

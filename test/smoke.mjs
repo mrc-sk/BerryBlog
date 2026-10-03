@@ -300,6 +300,96 @@ console.log('\n评论');
   }
 }
 
+/* --------------------------------------------------------- 下载区 */
+console.log('\n下载区');
+{
+  // 公开页可访问
+  const page = await req('/downloads');
+  check('下载页 200', page.status === 200 && page.text.includes('dl-card'), String(page.status));
+  check('导航有下载入口', page.text.includes('href="/downloads"'));
+  check('页脚有下载入口', page.text.includes('>下载</a>'));
+
+  // 跳转中转 + 计数
+  const before = await req('/downloads');
+  check('后台下载页可访问', (await req('/admin/downloads')).status === 200);
+
+  const idMatch = before.text.match(/href="\/d\/(\d+)"/);
+  const dlId = idMatch ? idMatch[1] : '';
+  check('提取到下载项 ID', !!dlId, dlId);
+
+  if (dlId) {
+    const hit = await req(`/d/${dlId}`);
+    check('点击跳转 302', hit.status === 302, String(hit.status));
+    check('跳转到外链', /^https?:\/\//.test(hit.res.headers.get('location') || ''),
+      hit.res.headers.get('location') || '');
+
+    // 计数应+1
+    const after = await req('/admin/downloads');
+    check('下载量有计数列', after.text.includes('下载量'));
+  }
+
+  // 非法链接应被拒
+  const bad = await req('/admin/downloads', form({
+    csrf_token: csrf,
+    title: '坏链接',
+    url: 'javascript:alert(1)',
+  }));
+  check('拒绝 javascript: 链接', decodeURIComponent(bad.res.headers.get('location') || '').includes('http'),
+    decodeURIComponent(bad.res.headers.get('location') || ''));
+
+  // 空标题应被拒
+  const noTitle = await req('/admin/downloads', form({
+    csrf_token: csrf,
+    title: '',
+    url: 'https://example.com',
+  }));
+  check('拒绝空标题', decodeURIComponent(noTitle.res.headers.get('location') || '').includes('标题不能为空'),
+    decodeURIComponent(noTitle.res.headers.get('location') || ''));
+
+  // 错误 CSRF
+  const badCsrfDl = await req('/admin/downloads', form({
+    csrf_token: 'bad', title: 'x', url: 'https://example.com',
+  }));
+  check('下载添加校验 CSRF', decodeURIComponent(badCsrfDl.res.headers.get('location') || '').includes('会话已过期'));
+
+  // 正常新增
+  const uniq = Date.now().toString(36);
+  const created = await req('/admin/downloads', form({
+    csrf_token: csrf,
+    title: `测试下载项 ${uniq}`,
+    summary: '测试用',
+    platform: '测试平台',
+    version: '9.9',
+    size: '1 MB',
+    url: 'https://example.com/file.zip',
+    is_featured: '',
+    sort_order: '99',
+  }));
+  check('新增下载项', created.status === 302 && (created.res.headers.get('location') || '').includes('ok='),
+    decodeURIComponent(created.res.headers.get('location') || ''));
+
+  const pub = await req('/downloads');
+  check('前台出现新项', pub.text.includes(`测试下载项 ${uniq}`));
+
+  // 清理
+  const admin = await req('/admin/downloads');
+  const delMatch = admin.text.match(/\/admin\/downloads\/(\d+)\/delete/);
+  if (delMatch) {
+    const rows = admin.text.split('</tr>');
+    for (const row of rows) {
+      if (row.includes(`测试下载项 ${uniq}`)) {
+        const id = row.match(/\/admin\/downloads\/(\d+)\/delete/)?.[1];
+        if (id) {
+          const del = await req(`/admin/downloads/${id}/delete`, form({ csrf_token: csrf }));
+          check('删除下载项', del.status === 302);
+        }
+      }
+    }
+  }
+  const gone = await req('/downloads');
+  check('删除后前台消失', !gone.text.includes(`测试下载项 ${uniq}`));
+}
+
 /* -------------------------------------------------------- 设置 */
 console.log('\n设置');
 {

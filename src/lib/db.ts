@@ -1,4 +1,4 @@
-import type { Env, Post, SiteConfig, Tag } from '../types';
+import type { Download, Env, Post, SiteConfig, Tag } from '../types';
 
 const SETTING_KEYS = [
   'site_name',
@@ -251,4 +251,98 @@ export async function bumpSettingsCounter(env: Env, key: string): Promise<void> 
     `INSERT INTO settings (key, value) VALUES (?, '1')
      ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)`
   ).bind(key).run();
+}
+
+/* ================================================================ 下载区 */
+/** 只允许 http/https，挡掉 javascript: 和 data: */
+function safeDownloadUrl(raw: string): string {
+  const s = String(raw || '').trim();
+  if (!/^https?:\/\//i.test(s)) return '';
+  return s.slice(0, 2000);
+}
+
+export async function listDownloads(env: Env, onlyFeatured = false): Promise<Download[]> {
+  const where = onlyFeatured ? 'WHERE is_featured = 1' : '';
+  const res = await env.DB.prepare(
+    `SELECT * FROM downloads ${where} ORDER BY sort_order ASC, id ASC`
+  ).all<Download>();
+  return res.results || [];
+}
+
+export async function countDownloads(env: Env): Promise<number> {
+  const res = await env.DB.prepare('SELECT COUNT(*) AS c FROM downloads').first<{ c: number }>();
+  return res?.c ?? 0;
+}
+
+export async function getDownload(env: Env, id: number): Promise<Download | null> {
+  return env.DB.prepare('SELECT * FROM downloads WHERE id = ?').bind(id).first<Download>();
+}
+
+export interface DownloadInput {
+  title: string;
+  summary: string;
+  platform: string;
+  version: string;
+  size: string;
+  url: string;
+  is_featured: number;
+  sort_order: number;
+}
+
+function normalizeDownload(input: DownloadInput): DownloadInput | { error: string } {
+  const title = String(input.title || '').trim().slice(0, 100);
+  if (!title) return { error: '标题不能为空' };
+  const url = safeDownloadUrl(input.url);
+  if (!url) return { error: '链接必须是 http:// 或 https:// 开头' };
+  return {
+    title,
+    summary: String(input.summary || '').trim().slice(0, 300),
+    platform: String(input.platform || '').trim().slice(0, 40),
+    version: String(input.version || '').trim().slice(0, 40),
+    size: String(input.size || '').trim().slice(0, 40),
+    url,
+    is_featured: input.is_featured ? 1 : 0,
+    sort_order: Number.isFinite(input.sort_order) ? Math.trunc(input.sort_order) : 0,
+  };
+}
+
+export async function createDownload(env: Env, input: DownloadInput): Promise<number | { error: string }> {
+  const d = normalizeDownload(input);
+  if ('error' in d) return d;
+  // 新条目默认排到末尾
+  const maxRow = await env.DB.prepare('SELECT MAX(sort_order) AS m FROM downloads').first<{ m: number | null }>();
+  const order = d.sort_order || (maxRow?.m ?? -1) + 1;
+  const res = await env.DB.prepare(
+    `INSERT INTO downloads (title, summary, platform, version, size, url, is_featured, sort_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  )
+    .bind(d.title, d.summary, d.platform, d.version, d.size, d.url, d.is_featured, order)
+    .run();
+  return Number(res.meta.last_row_id);
+}
+
+export async function updateDownload(env: Env, id: number, input: DownloadInput): Promise<'ok' | { error: string }> {
+  const d = normalizeDownload(input);
+  if ('error' in d) return d;
+  await env.DB.prepare(
+    `UPDATE downloads
+        SET title = ?, summary = ?, platform = ?, version = ?, size = ?,
+            url = ?, is_featured = ?, sort_order = ?, updated_at = datetime('now')
+      WHERE id = ?`
+  )
+    .bind(d.title, d.summary, d.platform, d.version, d.size, d.url, d.is_featured, d.sort_order, id)
+    .run();
+  return 'ok';
+}
+
+export async function deleteDownload(env: Env, id: number): Promise<void> {
+  await env.DB.prepare('DELETE FROM downloads WHERE id = ?').bind(id).run();
+}
+
+/** 点击计数 + 记录来源，供「下载量」排序和后台展示 */
+export async function recordDownload(env: Env, id: number): Promise<string | null> {
+  const row = await env.DB.prepare('SELECT url FROM downloads WHERE id = ?').bind(id).first<{ url: string }>();
+  if (!row) return null;
+  await env.DB.prepare('UPDATE downloads SET downloads = downloads + 1 WHERE id = ?').bind(id).run();
+  return row.url;
 }

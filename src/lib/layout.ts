@@ -70,6 +70,7 @@ ${o.extraHead || ''}
       <a href="/" class="${isActive(o.path, '/')}">首页</a>
       <a href="/archive" class="${isActive(o.path, '/archive')}">归档</a>
       <a href="/tags" class="${isActive(o.path, '/tags')}">标签</a>
+      <a href="/downloads" class="${isActive(o.path, '/downloads')}">下载</a>
       <a href="/about" class="${isActive(o.path, '/about')}">关于</a>
       <a href="/rss.xml" class="nav-rss" title="RSS 订阅">RSS</a>
       <button class="nav-search" id="navSearch" aria-label="搜索" title="搜索 (/)">
@@ -96,7 +97,7 @@ ${o.extraHead || ''}
     </div>
     <div class="footer-col">
       <strong>导航</strong>
-      <a href="/">首页</a> <a href="/archive">归档</a> <a href="/tags">标签</a> <a href="/about">关于</a> <a href="/rss.xml">RSS</a>
+      <a href="/">首页</a> <a href="/archive">归档</a> <a href="/tags">标签</a> <a href="/downloads">下载</a> <a href="/about">关于</a> <a href="/rss.xml">RSS</a>
     </div>
     <div class="footer-col">
       <strong>联系</strong>

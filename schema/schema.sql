@@ -79,3 +79,20 @@ CREATE TABLE IF NOT EXISTS settings (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
+
+-- 下载资源（后台可增删改，存的是外链，不占存储）
+CREATE TABLE IF NOT EXISTS downloads (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  title       TEXT NOT NULL,
+  summary     TEXT NOT NULL DEFAULT '',
+  platform    TEXT NOT NULL DEFAULT '',
+  version     TEXT NOT NULL DEFAULT '',
+  size        TEXT NOT NULL DEFAULT '',
+  url         TEXT NOT NULL,
+  is_featured INTEGER NOT NULL DEFAULT 0,
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  downloads   INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_downloads_sort ON downloads(sort_order, id);

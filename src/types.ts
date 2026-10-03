@@ -38,6 +38,21 @@ export interface Tag {
   count?: number;
 }
 
+export interface Download {
+  id: number;
+  title: string;
+  summary: string;
+  platform: string;
+  version: string;
+  size: string;
+  url: string;
+  is_featured: number;
+  sort_order: number;
+  downloads: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Comment {
   id: number;
   post_id: number;
