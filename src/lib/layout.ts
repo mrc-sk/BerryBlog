@@ -113,6 +113,7 @@ ${o.extraHead || ''}
   </div>
 </footer>
 
+<script src="/dot-motion.js" defer></script>
 <script src="/app.js" defer></script>
 ${o.extraScript ? `<script>${o.extraScript}</script>` : ''}
 </body>
@@ -168,7 +169,7 @@ export function postCard(p: {
   }
   const tags = (p.tags || []).map((t) => `<a class="chip" href="/tag/${html(t.slug)}">#${html(t.name)}</a>`).join('');
   return `<article class="post-card">
-    ${p.cover ? `<a class="post-cover" href="/p/${html(p.slug)}"><img src="${html(p.cover)}" alt="" loading="lazy"></a>` : ''}
+    ${p.cover ? `<a class="post-cover img-wrap" data-img-load="1" href="/p/${html(p.slug)}"><dot-motion-loader class="img-ph" data-dot-motion-tag="dml-cover" aria-hidden="true"></dot-motion-loader><img src="${html(p.cover)}" alt="" loading="lazy"></a>` : ''}
     <div class="post-body">
       <h2 class="post-title"><a href="/p/${html(p.slug)}">${html(p.title)}</a></h2>
       <p class="post-summary">${html(p.summary)}</p>

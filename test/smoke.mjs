@@ -396,17 +396,23 @@ console.log('\n下载区');
     ['主源', '备用', '镜像'].every((l) => pub.text.includes(`>${l}</a>`)),
     '缺某个源');
 
-  // 每源独立链接，且跳向不同地址
-  const ids = [...pub.text.matchAll(/href="\/d\/(\d+)\?s=(\d+)"/g)].map((m) => ({ d: m[1], s: m[2] }));
-  check('每源都有独立链接', ids.length >= 3, `只有 ${ids.length} 个`);
-  if (ids.length >= 3) {
-    const a = await req(`/d/${ids[0].d}?s=${ids[0].s}`);
-    const b = await req(`/d/${ids[1].d}?s=${ids[1].s}`);
-    check('源1 可跳转', a.status === 302 && /^https?:\/\//.test(a.res.headers.get('location') || ''));
-    check('源2 可跳转', b.status === 302 && /^https?:\/\//.test(b.res.headers.get('location') || ''));
-    check('两个源跳向不同地址',
-      a.res.headers.get('location') !== b.res.headers.get('location'),
-      `${a.res.headers.get('location')} vs ${b.res.headers.get('location')}`);
+  // 每源独立链接，且跳向不同地址。
+  // 必须按 article 切片取源 —— 页面上还有别的下载项的链接，
+  // 直接全局 matchAll 会混进其他项的源。
+  const card = pub.text.split('</article>').find((x) => x.includes(`多源测试 ${uniq}`)) || '';
+  const ids = [...card.matchAll(/href="\/d\/(\d+)\?s=(\d+)"/g)].map((m) => ({ d: m[1], s: m[2] }));
+  check('每源都有独立链接', ids.length === 3, `本项有 ${ids.length} 个（应为 3）`);
+  check('三个源同属一个下载项', new Set(ids.map((x) => x.d)).size === 1,
+    [...new Set(ids.map((x) => x.d))].join(','));
+  if (ids.length === 3 && new Set(ids.map((x) => x.d)).size === 1) {
+    const locs = [];
+    for (const [i, id] of ids.entries()) {
+      const r = await req(`/d/${id.d}?s=${id.s}`);
+      check(`源${i + 1} 可跳转`, r.status === 302 && /^https?:\/\//.test(r.res.headers.get('location') || ''),
+        r.res.headers.get('location') || '');
+      locs.push(r.res.headers.get('location'));
+    }
+    check('三个源跳向三个不同地址', new Set(locs).size === 3, locs.join(' | '));
   }
 
   // 清理

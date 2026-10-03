@@ -107,3 +107,52 @@
     });
   });
 })();
+/* ------------------------------------------- 图片加载占位（dot-motion-loader） */
+(function () {
+  var wraps = document.querySelectorAll('[data-img-load="1"]');
+  if (!wraps.length) return;
+
+  function done(wrap, ok) {
+    if (wrap.dataset.imgState) return;   // 只处理一次
+    wrap.dataset.imgState = ok ? 'ok' : 'err';
+    wrap.classList.add('is-loaded');
+    if (!ok) wrap.classList.add('is-error');
+    var ph = wrap.querySelector('.img-ph');
+    // 淡出后从 DOM 摘掉，动画不再占用合成层
+    if (ph) {
+      ph.addEventListener('transitionend', function () { ph.remove(); }, { once: true });
+      setTimeout(function () { ph.remove(); }, 600);
+    }
+  }
+
+  wraps.forEach(function (wrap) {
+    var img = wrap.querySelector('img');
+    if (!img) return;
+    // 已在缓存里时 load 不会再触发，所以先查 complete
+    if (img.complete) { done(wrap, img.naturalWidth > 0); return; }
+    img.addEventListener('load', function () { done(wrap, true); }, { once: true });
+    img.addEventListener('error', function () { done(wrap, false); }, { once: true });
+  });
+
+  /* 兜底：loading="lazy" 的图进了视口才会开始加载；若网络一直挂着，
+     占位会永久显示。这里用 IntersectionObserver 兜一层，超时或出视口都收尾。*/
+  var slow = [];
+  wraps.forEach(function (wrap) {
+    var img = wrap.querySelector('img');
+    if (!img || img.complete) return;
+    var timer = setTimeout(function () { done(wrap, false); }, 20000);
+    slow.push([wrap, timer]);
+  });
+  if (slow.length && 'IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var pair = slow.find(function (s) { return s[0] === e.target; });
+        if (!pair) return;
+        var img = e.target.querySelector('img');
+        if (img) img.addEventListener('load', function () { done(e.target, true); }, { once: true });
+      });
+    }, { rootMargin: '200px' });
+    slow.forEach(function (s) { io.observe(s[0]); });
+  }
+})();

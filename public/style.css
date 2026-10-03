@@ -638,3 +638,50 @@ kbd {
   .dl-btn { width: 100%; text-align: center; }
   .dl-acts { min-width: 0; }
 }
+
+/* ------------------------------------- 图片加载占位（dot-motion-loader） */
+/* 占位与图片叠在一起，靠 opacity 交叉淡入。加载完成后 .is-loaded 淡出占位。 */
+.img-wrap { position: relative; display: block; }
+/* 图片未加载时容器高度为 0，绝对定位的占位会浮在文字上。
+   给一个最小高度（大约 200px，够放72px 的占位 + 上下留白），
+   图片一加载完就由图片自己的尺寸接管。 */
+.img-wrap:not(.is-loaded) { min-height: 200px; }
+.img-wrap > img { opacity: 0; transition: opacity 0.45s ease; }
+.img-wrap.is-loaded { min-height: 0; }
+.img-wrap.is-loaded > img { opacity: 1; }
+
+.img-ph {
+  position: absolute; inset: 0; margin: auto;
+  width: 88px; height: 88px;
+  opacity: 1; transition: opacity 0.45s ease;
+  pointer-events: none;
+  /* 动起来的时候给个内凹槽，和站点的新拟物风格一致 */
+  border-radius: var(--radius-sm);
+  box-shadow: var(--neu-in-xs);
+}
+.img-wrap.is-loaded > .img-ph { opacity: 0; }
+
+/* 封面：容器已有 aspect-ratio 撑高度，不需要 min-height */
+.post-cover.img-wrap:not(.is-loaded) { min-height: 0; }
+.post-cover .img-ph { width: 100%; height: 100%; box-shadow: none; }
+
+/* 正文图片：包一层 figure 会多出默认 margin，这里抵消掉 */
+.prose figure.img-wrap { margin: 0.4em 0; }
+.prose .img-wrap > img { border-radius: var(--radius-sm); }
+.prose .img-ph { width: 72px; height: 72px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .img-wrap > img { transition: none; }
+  .img-ph { display: none; }
+}
+
+/* 图片加载失败：占位淡出后留一个提示，而不是空白 */
+.img-wrap.is-error { min-height: 0; }
+.img-wrap.is-error > img { display: none; }
+.img-wrap.is-error::after {
+  content: '图片加载失败';
+  display: block; padding: 26px 16px; text-align: center;
+  font-size: 13px; color: var(--text-dim);
+  background: var(--bg-soft); border-radius: var(--radius-sm);
+  box-shadow: var(--neu-in-xs);
+}

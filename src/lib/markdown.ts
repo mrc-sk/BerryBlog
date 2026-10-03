@@ -32,10 +32,13 @@ function renderInline(src: string): string {
 
   text = escapeHtml(text);
 
-  // 图片
+  // 图片：外面套一层 .img-wrap，图片加载完成前显示 dot-motion-loader 动画占位。
+  // 博客的图片都是外链，慢的时候是彻底空白，给个视觉反馈。
   text = text.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g,
     (_m, alt: string, url: string, title?: string) =>
-      `<img src="${escapeHtml(safeUrl(url))}" alt="${alt}"${title ? ` title="${title}"` : ''} loading="lazy">`);
+      `<figure class="img-wrap" data-img-load="1"><dot-motion-loader class="img-ph" data-dot-motion-tag="dml-img" aria-hidden="true"></dot-motion-loader>` +
+      `<img src="${escapeHtml(safeUrl(url))}" alt="${alt}"${title ? ` title="${title}"` : ''} loading="lazy">` +
+      `</figure>`);
 
   // 链接
   text = text.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g,
