@@ -113,7 +113,7 @@ ${o.extraHead || ''}
   </div>
 </footer>
 
-<script src="/dot-motion.js" defer></script>
+<script src="/dot-motion.js?v=2" defer></script>
 <script src="/app.js" defer></script>
 ${o.extraScript ? `<script>${o.extraScript}</script>` : ''}
 </body>
