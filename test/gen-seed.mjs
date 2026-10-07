@@ -227,10 +227,10 @@ lines.push(' WHERE ' + conds.join('\n    OR ') + ';');
 lines.push('');
 
 lines.push('INSERT OR IGNORE INTO settings (key, value) VALUES');
-lines.push(`  ('site_name', ${q("Nova's Blog")}),`);
-lines.push(`  ('site_tagline', ${q('写代码，也写字')}),`);
-lines.push(`  ('about', ${q('这里是我的小站。左边是我，右边也是我。')}),`);
-lines.push(`  ('footer_note', ${q('用 Hono + Workers + D1 搭建')}),`);
+lines.push(`  ('site_name', ${q('BerrywingBlog')}),`);
+lines.push(`  ('site_tagline', ${q('写代码，训ai，用ai')}),`);
+lines.push(`  ('about', ${q('这里是我的小站，左边是我，右边也是我。')}),`);
+lines.push(`  ('footer_note', ${q('赞助我吧 https://afdian.com/a/Berrywing')}),`);
 lines.push(`  ('comment_enabled', '1');`);
 
 const out = lines.join('\n') + '\n';

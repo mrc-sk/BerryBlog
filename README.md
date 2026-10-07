@@ -1,4 +1,4 @@
-# Nova Blog
+# BerryBlog
 
 Cloudflare Workers + D1 的全栈个人博客。**不是静态站** —— 有真正的后端、数据库和管理后台，但依然零服务器运维。
 
@@ -130,7 +130,7 @@ npm run db:seed:remote      # 灌示例数据（含默认管理员）
 npm run deploy
 ```
 
-完成。终端会给出 `https://nova-blog.<你的子域>.workers.dev`。
+完成。终端会给出 `https://berryblog.<你的子域>.workers.dev`。
 
 **改密码**（默认的 admin123 必须改）：
 

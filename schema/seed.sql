@@ -13,7 +13,7 @@
 -- ============================================
 
 INSERT OR IGNORE INTO users (username, password_hash) VALUES
-  ('admin', 'pbkdf2_sha256$100000$7ae79fa8532deee04001af8d0056af57$6870eae76e0fb28ea6788d4e1cc5539e5f3d4335efd9923bb5d8ebfe38039f22');
+  ('admin', 'pbkdf2_sha256$100000$65619dfe2c0c1575a167a6fc235b0ca5$718dd5c350322945095c1f609b2aa9c616005fc8513b716b2d3cb6a8715e5833');
 
 INSERT OR IGNORE INTO tags (name, slug) VALUES
   ('技术', 'tech'),
@@ -79,8 +79,8 @@ INSERT OR IGNORE INTO post_tags (post_id, tag_id)
     OR     (p.slug = 'markdown-cheatsheet' AND t.slug IN ('tech','essay'));
 
 INSERT OR IGNORE INTO settings (key, value) VALUES
-  ('site_name', 'Nova''s Blog'),
-  ('site_tagline', '写代码，也写字'),
-  ('about', '这里是我的小站。左边是我，右边也是我。'),
-  ('footer_note', '用 Hono + Workers + D1 搭建'),
+  ('site_name', 'BerrywingBlog'),
+  ('site_tagline', '写代码，训ai，用ai'),
+  ('about', '这里是我的小站，左边是我，右边也是我。'),
+  ('footer_note', '赞助我吧 https://afdian.com/a/Berrywing'),
   ('comment_enabled', '1');

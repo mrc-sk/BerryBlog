@@ -21,3 +21,7 @@ wrangler.jsonc
 .env
 .env.*
 !.env.example
+
+# 录屏的中间产物（frames 和临时 webm）
+demo/frames/
+demo/page@*.webm

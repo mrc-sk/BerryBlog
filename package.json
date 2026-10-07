@@ -1,5 +1,5 @@
 {
-  "name": "nova-blog",
+  "name": "berryblog",
   "version": "1.0.0",
   "private": true,
   "description": "Cloudflare Workers + D1 全栈个人博客",

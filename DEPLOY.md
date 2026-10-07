@@ -94,7 +94,7 @@ npm run deploy
 完成后终端给出地址：
 
 ```
-https://nova-blog.<你的子域>.workers.dev
+https://berryblog.<你的子域>.workers.dev
 ```
 
 浏览器打开验证首页和 `/admin`。

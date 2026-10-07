@@ -59,6 +59,6 @@ export function randomToken(bytes = 32): string {
 
 /** 不可逆 IP 指纹，用于评论限流与去重（不存明文 IP） */
 export async function ipHash(ip: string, salt: string): Promise<string> {
-  const hash = await pbkdf2(ip + '|' + salt, enc.encode('nova-blog-salt'), 10_000);
+  const hash = await pbkdf2(ip + '|' + salt, enc.encode('berryblog-salt'), 10_000);
   return toHex(hash).slice(0, 32);
 }
